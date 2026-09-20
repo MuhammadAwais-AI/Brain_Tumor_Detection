@@ -4,7 +4,7 @@ import torch.nn as nn
 from torchvision import transforms
 from PIL import Image
 import os
-import gdown
+import requests
 
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="Brain Tumor Detection", page_icon="🧠", layout="centered")
@@ -12,14 +12,35 @@ st.set_page_config(page_title="Brain Tumor Detection", page_icon="🧠", layout=
 # --- CONFIG ---
 MODEL_ID = "1RzmEhsIWG_iczHIeOiB6evLrhcfTfL6p"
 MODEL_PATH = "brain_tumor_model_complete.pth"
+DRIVE_URL = f"https://drive.google.com/uc?export=download&id={MODEL_ID}"
 
-# --- DOWNLOAD MODEL IF NOT EXISTS ---
+# --- DOWNLOAD MODEL IF NOT EXISTS (New stable method) ---
+def download_file_from_google_drive(id, destination):
+    URL = "https://drive.usercontent.google.com/download"
+    session = requests.Session()
+    response = session.get(URL, params={'id': id}, stream=True)
+
+    # Handle virus scan warning
+    token = None
+    for key, value in response.cookies.items():
+        if key.startswith('download_warning'):
+            token = value
+            break
+
+    if token:
+        params = {'id': id, 'confirm': token}
+        response = session.get(URL, params=params, stream=True)
+
+    with open(destination, "wb") as f:
+        for chunk in response.iter_content(32768):
+            if chunk:
+                f.write(chunk)
+
 if not os.path.exists(MODEL_PATH):
     with st.spinner("Downloading model for first time... please wait (50MB)..."):
-        # This fuzzy=True fixes the FileURLRetrievalError
-        gdown.download(id=MODEL_ID, output=MODEL_PATH, quiet=False, fuzzy=True)
+        download_file_from_google_drive(MODEL_ID, MODEL_PATH)
 
-# --- MODEL ARCHITECTURE (Must be same as training) ---
+# --- MODEL ARCHITECTURE ---
 class BrainTumorCNN(nn.Module):
     def __init__(self, num_classes=4):
         super(BrainTumorCNN, self).__init__()
@@ -36,7 +57,6 @@ class BrainTumorCNN(nn.Module):
             nn.Dropout(0.25),
             nn.Linear(256, num_classes)
         )
-
     def forward(self, x):
         x = self.features(x)
         x = self.classifier(x)
@@ -51,14 +71,9 @@ def load_model():
     model.eval()
     return model, class_names
 
-# Load model
-try:
-    model, class_names = load_model()
-except Exception as e:
-    st.error(f"Error loading model: {e}")
-    st.stop()
+model, class_names = load_model()
 
-# --- IMAGE TRANSFORMS ---
+# --- TRANSFORMS ---
 transform = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
@@ -74,7 +89,6 @@ uploaded_file = st.file_uploader("Choose an MRI Image...", type=["jpg", "jpeg", 
 if uploaded_file is not None:
     image = Image.open(uploaded_file).convert('RGB')
     st.image(image, caption='Uploaded MRI', use_column_width=True)
-
     if st.button('Predict Tumor', type="primary"):
         with st.spinner("Analyzing..."):
             img_tensor = transform(image).unsqueeze(0)
@@ -83,14 +97,5 @@ if uploaded_file is not None:
                 _, predicted = torch.max(outputs, 1)
                 probs = torch.nn.functional.softmax(outputs, dim=1)
                 confidence = probs[0][predicted].item() * 100
-                predicted_class = class_names[predicted.item()]
-
-            st.success(f"**Prediction: {predicted_class}**")
+            st.success(f"**Prediction: {class_names[predicted.item()]}**")
             st.info(f"Confidence: {confidence:.2f}%")
-
-            # Show all probabilities
-            st.write("**All Class Probabilities:**")
-            for i, class_name in enumerate(class_names):
-                st.write(f"- {class_name}: {probs[0][i].item()*100:.2f}%")
-else:
-    st.info("Please upload an image to get started.")
