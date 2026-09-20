@@ -54,7 +54,7 @@ Classifier:
 - Epochs: 20-30
 - Normalization: mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]
 - Augmentation: Resize, ToTensor
-
+```
 📊 Results
 - Training Accuracy: ∼95%
 - Validation Accuracy: ∼89-92%
