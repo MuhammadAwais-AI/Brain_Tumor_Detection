@@ -7,7 +7,7 @@
 
 An end-to-end Deep Learning project that classifies brain MRI scans into 4 categories: **Glioma, Meningioma, Pituitary, and No Tumor**. Built with a custom CNN from scratch (no transfer learning) and deployed as an interactive web app.
 
-> 🚀 **Live Demo:** [Click here to try the app](https://your-streamlit-link.streamlit.app)  
+> 🚀 **Live Demo:** [Click here to try the app](https://braintumordetection-qxwxy98kda6p4ygtftfqvr.streamlit.app/)  
 > 📦 **Dataset:** [Brain Tumor MRI Dataset - Kaggle](https://www.kaggle.com/datasets/masoudnickparvar/brain-tumor-mri-dataset)
 
 ---
