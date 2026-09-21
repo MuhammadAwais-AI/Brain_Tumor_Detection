@@ -1,14 +1,38 @@
-import os
 import streamlit as st
 import torch
 import torch.nn as nn
 from torchvision import transforms
 from PIL import Image
+from huggingface_hub import hf_hub_download
 
-# ============================================================
-# Brain Tumor CNN - architecture used during training
-# ============================================================
+# ---------------------------------------------------------
+# Page configuration
+# ---------------------------------------------------------
+st.set_page_config(
+    page_title="Brain Tumor Classification",
+    page_icon="🧠",
+    layout="centered"
+)
 
+# ---------------------------------------------------------
+# Model configuration
+# ---------------------------------------------------------
+REPO_ID = "muhammadawaiskhan94725/brain-tumor-model"
+MODEL_FILENAME = "brain_tumor_model_complete.pth"
+
+CLASS_NAMES = [
+    "glioma",
+    "meningioma",
+    "notumor",
+    "pituitary"
+]
+
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+# ---------------------------------------------------------
+# IMPORTANT: This architecture matches the checkpoint
+# ---------------------------------------------------------
 class BrainTumorCNN(nn.Module):
     def __init__(self, num_classes=4):
         super().__init__()
@@ -16,22 +40,22 @@ class BrainTumorCNN(nn.Module):
         self.features = nn.Sequential(
             nn.Conv2d(3, 32, kernel_size=3, padding=1),
             nn.ReLU(),
-            nn.MaxPool2d(2),
+            nn.MaxPool2d(kernel_size=2, stride=2),
 
             nn.Conv2d(32, 64, kernel_size=3, padding=1),
             nn.ReLU(),
-            nn.MaxPool2d(2),
+            nn.MaxPool2d(kernel_size=2, stride=2),
 
             nn.Conv2d(64, 128, kernel_size=3, padding=1),
             nn.ReLU(),
-            nn.MaxPool2d(2),
+            nn.MaxPool2d(kernel_size=2, stride=2),
 
             nn.Conv2d(128, 256, kernel_size=3, padding=1),
             nn.ReLU(),
-            nn.MaxPool2d(2)
+            nn.MaxPool2d(kernel_size=2, stride=2)
         )
 
-        # 224x224 -> 112 -> 56 -> 28 -> 14
+        # 224x224 -> 14x14 after four 2x2 pooling layers
         self.classifier = nn.Sequential(
             nn.Flatten(),
             nn.Linear(256 * 14 * 14, 256),
@@ -46,138 +70,95 @@ class BrainTumorCNN(nn.Module):
         return x
 
 
-# ============================================================
-# Configuration
-# ============================================================
-
-st.set_page_config(
-    page_title="Brain Tumor Detection",
-    page_icon="🧠",
-    layout="centered"
-)
-
-CLASS_NAMES = [
-    "Glioma",
-    "Meningioma",
-    "No Tumor",
-    "Pituitary"
-]
-
-# Put the .pth file in the same folder as app.py
-MODEL_PATH = "brain_tumor_model_complete (1).pth"
-
-
-# ============================================================
-# Image preprocessing - same as training
-# ============================================================
-
-transform = transforms.Compose([
-    transforms.Resize((224, 224)),
-    transforms.ToTensor(),
-    transforms.Normalize(
-        mean=[0.5, 0.5, 0.5],
-        std=[0.5, 0.5, 0.5]
-    )
-])
-
-
-# ============================================================
-# Model loading
-# ============================================================
-
+# ---------------------------------------------------------
+# Download/load model
+# ---------------------------------------------------------
 @st.cache_resource
 def load_model():
-    if not os.path.exists(MODEL_PATH):
-        raise FileNotFoundError(
-            f"Model file not found: {MODEL_PATH}\n\n"
-            "Put the .pth file in the same folder as app.py."
-        )
-
-    model = BrainTumorCNN(num_classes=4)
+    model_path = hf_hub_download(
+        repo_id=REPO_ID,
+        filename=MODEL_FILENAME
+    )
 
     checkpoint = torch.load(
-        MODEL_PATH,
-        map_location=torch.device("cpu"),
+        model_path,
+        map_location=DEVICE,
         weights_only=False
     )
 
-    # Support the common checkpoint formats:
-    # 1. {'model_state_dict': ...}
-    # 2. {'state_dict': ...}
-    # 3. direct state_dict
-    if isinstance(checkpoint, dict):
-        if "model_state_dict" in checkpoint:
-            state_dict = checkpoint["model_state_dict"]
-        elif "state_dict" in checkpoint:
-            state_dict = checkpoint["state_dict"]
-        else:
-            state_dict = checkpoint
+    model = BrainTumorCNN(num_classes=4)
+
+    # The checkpoint contains:
+    # {"model_state": state_dict, "classes": [...]}
+    if isinstance(checkpoint, dict) and "model_state" in checkpoint:
+        state_dict = checkpoint["model_state"]
+    elif isinstance(checkpoint, dict):
+        # Also support a plain state_dict checkpoint
+        state_dict = checkpoint
     else:
         raise TypeError(
-            "Unsupported checkpoint format. Expected a PyTorch state_dict/checkpoint."
+            "Unexpected checkpoint format. Expected a PyTorch state_dict."
         )
 
-    # Remove prefixes sometimes added by DataParallel or wrappers.
-    cleaned_state_dict = {}
-    for key, value in state_dict.items():
-        new_key = key
-        if new_key.startswith("module."):
-            new_key = new_key[len("module."):]
-        if new_key.startswith("model."):
-            new_key = new_key[len("model."):]
-        cleaned_state_dict[new_key] = value
+    # Remove possible DataParallel prefix if present
+    state_dict = {
+        key.replace("module.", "", 1) if key.startswith("module.") else key: value
+        for key, value in state_dict.items()
+    }
 
-    model.load_state_dict(cleaned_state_dict, strict=True)
+    model.load_state_dict(state_dict, strict=True)
+    model.to(DEVICE)
     model.eval()
 
     return model
 
 
-# ============================================================
-# Prediction
-# ============================================================
+# ---------------------------------------------------------
+# Image preprocessing
+# ---------------------------------------------------------
+transform = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    transforms.Normalize(
+        mean=[0.485, 0.456, 0.406],
+        std=[0.229, 0.224, 0.225]
+    )
+])
 
+
+# ---------------------------------------------------------
+# Prediction
+# ---------------------------------------------------------
 def predict(image, model):
     image = image.convert("RGB")
-    tensor = transform(image).unsqueeze(0)
+    tensor = transform(image).unsqueeze(0).to(DEVICE)
 
-    with torch.no_grad():
+    with torch.inference_mode():
         outputs = model(tensor)
-        probabilities = torch.softmax(outputs, dim=1)
-        confidence, predicted_index = torch.max(probabilities, dim=1)
+        probabilities = torch.softmax(outputs, dim=1)[0]
 
-    predicted_class = CLASS_NAMES[predicted_index.item()]
-    confidence_value = confidence.item()
+    predicted_index = int(torch.argmax(probabilities).item())
+    predicted_class = CLASS_NAMES[predicted_index]
+    confidence = float(probabilities[predicted_index].item())
 
-    return predicted_class, confidence_value, probabilities[0]
+    return predicted_class, confidence, probabilities.cpu()
 
 
-# ============================================================
-# Streamlit UI
-# ============================================================
-
-st.title("🧠 Brain Tumor Detection")
+# ---------------------------------------------------------
+# UI
+# ---------------------------------------------------------
+st.title("🧠 Brain Tumor Classification")
 st.write(
-    "Upload a brain MRI image and the trained CNN will classify it "
-    "into one of four classes."
+    "Upload a brain MRI image to classify it into one of four classes."
 )
 
 st.info(
-    "Classes: Glioma • Meningioma • No Tumor • Pituitary"
+    "Classes: Glioma, Meningioma, No Tumor, and Pituitary."
 )
 
-try:
-    model = load_model()
-    st.success("✅ Model loaded successfully.")
-except Exception as e:
-    st.error("❌ Model could not be loaded.")
-    st.code(str(e))
-    st.stop()
-
-
 uploaded_file = st.file_uploader(
-    "Upload MRI image",
-    type=["jpg", "jpeg", "png"]
+    "Upload an MRI image",
+    type=["jpg", "jpeg", "png", "webp"]
 )
 
 if uploaded_file is not None:
@@ -190,31 +171,49 @@ if uploaded_file is not None:
     )
 
     if st.button("🔍 Predict", type="primary"):
-        with st.spinner("Analyzing image..."):
-            predicted_class, confidence, probabilities = predict(
-                image, model
+        try:
+            with st.spinner("Loading model and making prediction..."):
+                model = load_model()
+                predicted_class, confidence, probabilities = predict(
+                    image, model
+                )
+
+            st.subheader("Prediction")
+
+            if predicted_class == "notumor":
+                display_name = "No Tumor"
+            else:
+                display_name = predicted_class.capitalize()
+
+            st.success(
+                f"Prediction: **{display_name}**"
             )
 
-        st.subheader("Prediction")
-        st.success(f"**{predicted_class}**")
-
-        st.metric(
-            "Confidence",
-            f"{confidence * 100:.2f}%"
-        )
-
-        st.subheader("Class probabilities")
-
-        for class_name, probability in zip(
-            CLASS_NAMES, probabilities.tolist()
-        ):
-            st.write(
-                f"**{class_name}:** {probability * 100:.2f}%"
+            st.metric(
+                "Confidence",
+                f"{confidence * 100:.2f}%"
             )
-            st.progress(float(probability))
 
-        st.warning(
-            "This application is for educational/research purposes only "
-            "and is not a medical diagnosis. MRI results should be "
-            "interpreted by a qualified medical professional."
-        )
+            st.subheader("Class probabilities")
+
+            for i, class_name in enumerate(CLASS_NAMES):
+                label = (
+                    "No Tumor"
+                    if class_name == "notumor"
+                    else class_name.capitalize()
+                )
+                st.write(
+                    f"**{label}:** {probabilities[i].item() * 100:.2f}%"
+                )
+
+        except Exception as e:
+            st.error("The model could not be loaded or the image could not be processed.")
+            st.exception(e)
+
+st.divider()
+
+st.caption(
+    "⚠️ Educational/research use only. This application is not a "
+    "medical diagnostic tool and should not be used for clinical decisions. "
+    "Please consult a qualified healthcare professional for medical advice."
+)
