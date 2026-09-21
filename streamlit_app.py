@@ -13,7 +13,7 @@ MODEL_PATH = "brain_tumor_model_complete.pth"
 
 def download_model():
     if not os.path.exists(MODEL_PATH):
-        with st.spinner("Downloading model first time... 50MB..."):
+        with st.spinner("Downloading model (50MB)..."):
             r = requests.get(MODEL_URL, stream=True)
             r.raise_for_status()
             with open(MODEL_PATH, "wb") as f:
@@ -43,9 +43,34 @@ class BrainTumorCNN(nn.Module):
 @st.cache_resource
 def load_model():
     checkpoint = torch.load(MODEL_PATH, map_location='cpu')
-    class_names = checkpoint['class_names']
+
+    # --- FIX FOR KeyError ---
+    # Default classes if not saved in model
+    default_classes = ['glioma', 'meningioma', 'notumor', 'pituitary']
+
+    if isinstance(checkpoint, dict):
+        # Get class names if available
+        if 'class_names' in checkpoint:
+            class_names = checkpoint['class_names']
+        elif 'classes' in checkpoint:
+            class_names = checkpoint['classes']
+        else:
+            class_names = default_classes
+
+        # Get state dict if available
+        if 'model_state_dict' in checkpoint:
+            state_dict = checkpoint['model_state_dict']
+        elif 'state_dict' in checkpoint:
+            state_dict = checkpoint['state_dict']
+        else:
+            state_dict = checkpoint
+    else:
+        # checkpoint is directly state_dict
+        state_dict = checkpoint
+        class_names = default_classes
+
     model = BrainTumorCNN(num_classes=len(class_names))
-    model.load_state_dict(checkpoint['model_state_dict'])
+    model.load_state_dict(state_dict)
     model.eval()
     return model, class_names
 
@@ -58,7 +83,7 @@ transform = transforms.Compose([
 ])
 
 st.title("🧠 Brain Tumor Detection")
-st.write("Upload MRI to classify: Glioma, Meningioma, Pituitary, or No Tumor")
+st.write(f"Model loaded. Classes: {', '.join(class_names)}")
 
 uploaded_file = st.file_uploader("Choose MRI Image...", type=["jpg", "jpeg", "png"])
 if uploaded_file:
