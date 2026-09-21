@@ -110,8 +110,8 @@ This project is for *educational and learning purposes only*. It is NOT a medica
 
 👨‍💻 Author
 *Muhammad Awais khan*
-- LinkedIn: https://linkedin.com/in/yourprofile
-- GitHub: https://github.com/yourusername
+- Linkedin : https://www.linkedin.com/in/muhammad-awais-khan-95559041a?utm_source=share_via&utm_content=profile&utm_medium=member_android
+- GitHub : https://github.com/MuhammadAwais-AI
 
 If you like this project, please ⭐ star the repo!
 
