@@ -63,7 +63,7 @@ Classifier:
 💻 Installation & Usage (Local)
 
 *1. Clone the repo*
-git clone https://github.com/yourusername/brain-tumor-classification.git
+git clone https://github.com/MuhammadAwais-AI/Brain_Tumor_Detection.
 cd brain-tumor-classification
 *2. Install dependencies*
 pip install -r requirements.txt
@@ -72,7 +72,7 @@ streamlit run app.py
 *requirements.txt*
 streamlit
 torch
-torchvision
+torch vision 
 Pillow
 📁 Project Structure
 brain-tumor-app/
