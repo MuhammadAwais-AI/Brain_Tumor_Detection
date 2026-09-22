@@ -1,4 +1,4 @@
-🧠 Brain Tumor Classification using CNN from Scratch
+*🧠 Brain Tumor Classification using CNN from Scratch*
 
 ![Python](https://img.shields.io/badge/Python-3.10-blue)
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.0-red)
