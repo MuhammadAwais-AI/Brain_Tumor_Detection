@@ -12,7 +12,7 @@ An end-to-end Deep Learning project that classifies brain MRI scans into 4 categ
 
 ---
 
-📸 Demo Screenshots
+**📸 Demo Screenshots**
 
 | Glioma | Meningioma | Pituitary | No Tumor |
 | :---: | :---: | :---: | :---: |
@@ -20,10 +20,10 @@ An end-to-end Deep Learning project that classifies brain MRI scans into 4 categ
 
 *Upload any MRI scan and get instant prediction with confidence score.*
 
-🧩 Problem Statement
+**🧩 Problem Statement**
 Brain tumors are life-threatening and early detection is critical. This project aims to automate the classification of brain tumors from MRI images using Computer Vision to assist in early screening (for educational purposes only).
 
-📂 Dataset
+**📂 Dataset**
 - Total Images: ~7023 MRI scans
 - Classes: 4
     - `glioma`
@@ -33,7 +33,7 @@ Brain tumors are life-threatening and early detection is critical. This project 
 - Split: 80% Training, 20% Testing
 - Image Size: 224x224
 
-🏗️ Model Architecture (Built from Scratch)
+**🏗️ Model Architecture** (Built from Scratch)
 I did **NOT use any pretrained model** like ResNet or VGG. Custom CNN designed in PyTorch:
 
 ```python
@@ -55,12 +55,12 @@ Classifier:
 - Normalization: mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]
 - Augmentation: Resize, ToTensor
 ```
-📊 Results
+**📊 Results**
 - Training Accuracy: ∼95%
 - Validation Accuracy: ∼89-92%
 - The model correctly distinguishes between tumor types with high confidence.
 
-💻 Installation & Usage (Local)
+**💻 Installation & Usage (Local)**
 
 *1. Clone the repo*
 git clone https://github.com/MuhammadAwais-AI/Brain_Tumor_Detection.
@@ -74,7 +74,7 @@ streamlit
 torch
 torch vision 
 Pillow
-📁 Project Structure
+**📁 Project Structure**
 brain-tumor-app/
 ├── app.py                              # Streamlit web app
 ├── brain_tumor_model_complete.pth      # Trained model (state_dict + classes)
@@ -85,33 +85,33 @@ brain-tumor-app/
     ├── meningioma.png
     ├── pituitary.png
     └── notumor.png
-🌐 Deployment on Streamlit Cloud
+**🌐 Deployment on Streamlit Cloud**
 1. Push this repo to GitHub
 2. Go to http://share.streamlit.io
 3. Connect your GitHub repo
 4. Set main file: `app.py`
 5. Deploy!
 
-🛠️ Tech Stack
+**🛠️ Tech Stack**
 - *Language:* Python
 - *Deep Learning:* PyTorch
 - *Web App:* Streamlit
 - *Image Processing:* PIL, torchvision
 - *Platform:* Google Colab (Training), Streamlit Cloud (Deployment)
 
-⚠️ Disclaimer
+**⚠️ Disclaimer**
 This project is for *educational and learning purposes only*. It is NOT a medical diagnosis tool. Always consult a qualified doctor for medical advice.
 
-🔮 Future Improvements
+**🔮 Future Improvements**
 - [ ] Add Grad-CAM for explainability (show where tumor is)
 - [ ] Use EfficientNet / ResNet50 for higher accuracy
 - [ ] Add PDF report generation
 - [ ] Deploy with Docker + Hugging Face Spaces
 
-👨‍💻 Author
+**👨‍💻 Author**
 *Muhammad Awais khan*
-- Linkedin : https://www.linkedin.com/in/muhammad-awais-khan-95559041a?utm_source=share_via&utm_content=profile&utm_medium=member_android
-- GitHub : https://github.com/MuhammadAwais-AI
+ *Linkedin* : https://www.linkedin.com/in/muhammad-awais-khan-95559041a?utm_source=share_via&utm_content=profile&utm_medium=member_android
+ *GitHub* : https://github.com/MuhammadAwais-AI
 
 If you like this project, please ⭐ star the repo!
 
